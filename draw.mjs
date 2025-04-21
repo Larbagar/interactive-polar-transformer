@@ -24,7 +24,11 @@ const spin = (x, y) => {
         return {x: x - animationTime * piLen, y: y}
     }
 }
-let transformationFunction = spin
+const lerp = (x, y) => {
+    const angle = (x / piLen - animationTime) * 2 * Math.PI
+    return {x: x * (1 - animationTime) + -y * Math.cos(x / piLen * 2 * Math.PI) * animationTime, y: y * (1 - animationTime) + y * Math.sin(x / piLen * 2 * Math.PI) * animationTime}
+}
+let transformationFunction = lerp
 
 
 
