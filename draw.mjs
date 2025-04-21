@@ -3,24 +3,25 @@ import {toWorld, transX, transY, zoom} from "./camera.mjs"
 import {strokes} from "./drawing.mjs"
 import {toolbar} from "./toolbar.mjs"
 
-window.transFunc = ctx => {}
 
-const stepLen = 500
+const piLen = 500
+const stepLen = 250
 
 let animationTime = 0
 function setAnimationTime(t){
     animationTime = t
+    window.animationTime = t
 }
 window.setAnimationTime = x => {
     animationTime = x
     draw()
 }
 const spin = (x, y) => {
-    if(x < animationTime){
-        const angle = (x - animationTime) * 2 * Math.PI / stepLen
+    if(x / piLen < animationTime){
+        const angle = (x / piLen - animationTime) * 2 * Math.PI
         return {x: -y*Math.sin(angle), y: y*Math.cos(angle)}
     }else{
-        return {x: x - animationTime * Math.sign(x), y: y}
+        return {x: x - animationTime * piLen, y: y}
     }
 }
 let transformationFunction = spin
@@ -51,29 +52,45 @@ function draw(){
     ctx.lineTo(0, bottom)
     ctx.stroke()
 
+    ctx.lineWidth = 1
+    ctx.globalAlpha = 0.5
     ctx.beginPath()
     for(let i = Math.ceil(left / stepLen) * stepLen; i <= Math.floor(right / stepLen) * stepLen; i += stepLen){
-        ctx.moveTo(i, -10)
-        ctx.lineTo(i, 10)
+        ctx.moveTo(i, top)
+        ctx.lineTo(i, bottom)
     }
     for(let i = Math.ceil(top / stepLen) * stepLen; i <= Math.floor(bottom / stepLen) * stepLen; i += stepLen){
-        ctx.moveTo(-10, i)
-        ctx.lineTo(10, i)
+        ctx.moveTo(left, i)
+        ctx.lineTo(right, i)
     }
     ctx.stroke()
 
-    ctx.strokeStyle = "red"
+    ctx.globalAlpha = 1
     ctx.lineWidth = 5
-    ctx.beginPath()
     for(const stroke of strokes){
+        ctx.strokeStyle = stroke.color
+        ctx.beginPath()
         const start = transformationFunction(stroke.path[0], stroke.path[1])
         ctx.moveTo(start.x, start.y)
-        for(let i = 2; i < stroke.path.length; i += 2){
-            const vertex = transformationFunction(stroke.path[i], stroke.path[i + 1])
-            ctx.lineTo(vertex.x, vertex.y)
+        if(window.pathRaw){
+            for(let i = 2; i < stroke.pathRaw.length; i += 2){
+                const vertex = transformationFunction(stroke.pathRaw[i], stroke.pathRaw[i + 1])
+                ctx.lineTo(vertex.x, vertex.y)
+            }
+        }else {
+            for (let i = 2; i < stroke.path.length; i += 2) {
+                const vertex = transformationFunction(stroke.path[i], stroke.path[i + 1])
+                ctx.lineTo(vertex.x, vertex.y)
+            }
         }
+        ctx.stroke()
+
+        ctx.strokeStyle = "magenta"
+        ctx.beginPath()
+        ctx.moveTo(stroke.path[stroke.path.length - 4], stroke.path[stroke.path.length - 3])
+        ctx.lineTo(stroke.path[stroke.path.length - 2], stroke.path[stroke.path.length - 1])
+        ctx.stroke()
     }
-    ctx.stroke()
 
     ctx.restore()
 
@@ -90,5 +107,6 @@ function draw(){
 
     ctx.restore()
 }
+window.draw = draw
 
 export {draw, setAnimationTime}

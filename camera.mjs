@@ -18,8 +18,13 @@ function setupCameraListeners(){
             transY = (world.y + transY) / factor - world.y
             zoom *= factor
         }else{
-            transX -= e.deltaX / zoom
-            transY -= e.deltaY / zoom
+            if(e.shiftKey) {
+                transX -= e.deltaY / zoom
+                transY -= e.deltaX / zoom
+            }else{
+                transX -= e.deltaX / zoom
+                transY -= e.deltaY / zoom
+            }
         }
         draw()
     }, {passive: false})

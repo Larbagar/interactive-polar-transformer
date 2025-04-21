@@ -1,5 +1,7 @@
 import {ctx} from "./canvas.mjs"
 import {draw, setAnimationTime} from "./draw.mjs"
+import {cursorHandlerMap, InputType, pointerHandlerMap} from "./inputHandler.mjs"
+import {createDrawHandler, EraseHandler} from "./drawing.mjs"
 
 class IconHandler {
     toolbar
@@ -52,16 +54,18 @@ class Toolbar {
             position += currentIcon.width
         }
     }
-    pointerDown(x, y){
+    pointerDown(x, y, inputType){
         let position = 0
         for(const icon of this.icons){
             const relX = x - this.x - position
             if(0 <= relX && relX < this.scale*icon.width){
-                if(icon.pointerDown) {
-                    return new IconHandler(this, icon, icon.pointerDown(
-                        (x - this.x - position)/toolbar.scale,
-                        (y - this.y)/toolbar.scale)
-                    )
+                const handler = icon.pointerDown?.(
+                    (x - this.x - position)/toolbar.scale,
+                    (y - this.y)/toolbar.scale,
+                    inputType
+                )
+                if(handler) {
+                    return new IconHandler(this, icon, handler)
                 }else{
                     return
                 }
@@ -126,6 +130,14 @@ class Color {
         ctx.fill()
         ctx.stroke()
     }
+    pointerDown(x, y, type){
+        if(type.type == InputType.POINTER){
+            pointerHandlerMap.set(type.id, createDrawHandler(this.color))
+        }
+        if(type.type == InputType.MOUSE){
+            cursorHandlerMap.set(type.id, createDrawHandler(this.color))
+        }
+    }
 }
 
 class Pen {
@@ -159,6 +171,14 @@ class Eraser {
         ctx.stroke()
         ctx.restore()
     }
+    pointerDown(x, y, type){
+        if(type.type == InputType.POINTER){
+            pointerHandlerMap.set(type.id, EraseHandler)
+        }
+        if(type.type == InputType.MOUSE){
+            cursorHandlerMap.set(type.id, EraseHandler)
+        }
+    }
 }
 
 class Padding {
@@ -171,13 +191,13 @@ class Padding {
 
 class SliderHandler {
     constructor(x, y, slider) {
-        this.x = x
         this.slider = slider
+        this.x = this.slider.position - x / 0.8 / this.slider.width
     }
     move(x, y) {
-        this.slider.position = (x - 0.1)/0.8/this.slider.width
-        // this.slider.position = Math.max(0, Math.min(1, this.slider.position))
-        setAnimationTime(500*this.slider.position)
+        this.slider.position = this.x + x / 0.8 / this.slider.width
+        this.slider.position = Math.max(0, Math.min(1, this.slider.position))
+        setAnimationTime(this.slider.position)
 
         draw()
     }
@@ -218,6 +238,7 @@ toolbar.icons.push(
     // new Padding(),
     new Color("red"),
     new Color("green"),
+    new Color("blue"),
     new Eraser(),
     new Padding(),
     new Slider(2),

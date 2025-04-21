@@ -54,15 +54,20 @@ class Stroke {
     smoothness
     /** @type {number} */
     resolution
-    constructor(startX, startY, smoothness = 0.01, resolution = 20) {
+    constructor(startX, startY, color = "red", smoothness = 0.02, resolution = 20) { // 0.02, 20
         this.drawX = startX
         this.drawY = startY
         this.lastX = startX
         this.lastY = startY
         this.smoothness = smoothness
         this.resolution = resolution
+        this.color = color
+        this.pathRaw = []
     }
     append(x, y){
+        this.pathRaw.push(x, y)
+        this.path.pop()
+        this.path.pop()
         const dist = Math.hypot(x - this.drawX, y - this.drawY)
         const count = Math.ceil(dist / this.resolution)
         const stepLen = dist / count
@@ -73,6 +78,7 @@ class Stroke {
             currentY = follow(this.lastY, (y - this.lastY) / dist, this.drawY, this.smoothness, t)
             this.path.push(currentX, currentY)
         }
+        this.path.push(x, y)
         this.drawX = currentX
         this.drawY = currentY
 
@@ -100,27 +106,26 @@ function rayIntersection(
     return {a, b}
 }
 
-class DrawHandler {
-    constructor(x, y) {
+function createDrawHandler(col){
+    const handler = function(x, y){
         const world = toWorld(x, y)
-        this.stroke = new Stroke(world.x, world.y)
+        this.stroke = new Stroke(world.x, world.y, col)
         this.action = new StrokeAction(this.stroke)
         this.action.do()
         did.push(this.action)
+        this.move = function(x, y){
+            const world = toWorld(x, y)
+            this.stroke.append(world.x, world.y)
+            draw()
+        }
+        this.end = function(x, y){
+            const world = toWorld(x, y)
+            this.stroke.end(world.x, world.y)
+            draw()
+        }
+        handler.cancel = function(){}
     }
-    move(x, y){
-        const world = toWorld(x, y)
-        this.stroke.append(world.x, world.y)
-        draw()
-    }
-    end(x, y){
-        const world = toWorld(x, y)
-        this.stroke.end(world.x, world.y)
-        draw()
-    }
-    cancel(){
-
-    }
+    return handler
 }
 
 class EraseHandler {
@@ -161,4 +166,4 @@ class EraseHandler {
     }
 }
 
-export {DrawHandler, EraseHandler, strokes}
+export {createDrawHandler, EraseHandler, strokes}
